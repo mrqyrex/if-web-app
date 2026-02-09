@@ -12,27 +12,36 @@
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Insaniyat Fund Login</h2>
-    <input id="mid" placeholder="Member ID (IF-01)">
-    <input id="pass" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-  </div>
+
+<div class="card">
+  <h2>Insaniyat Fund Login</h2>
+  <input id="mid" placeholder="Member ID (IF-01)">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+</div>
 
 <script>
-  function login(){
-    const member = { id:"IF-01", pass:"1234", deposit:1200 };
+function login(){
+  // DEMO MEMBER
+  const member = {
+    id: "IF-01",
+    pass: "1234",
+    deposit: 1200,
+    loanTaken: 0,
+    lastDeposit: "2026-02-01"
+  };
 
-    const mid = document.getElementById("mid").value;
-    const pass = document.getElementById("pass").value;
+  const mid = document.getElementById("mid").value;
+  const pass = document.getElementById("pass").value;
 
-    if(mid===member.id && pass===member.pass){
-      localStorage.setItem("member", JSON.stringify(member));
-      location.href = "dashboard.html";
-    }else{
-      alert("Wrong ID or Password");
-    }
+  if(mid === member.id && pass === member.pass){
+    localStorage.setItem("member", JSON.stringify(member));
+    location.href = "dashboard.html";
+  }else{
+    alert("Wrong ID or Password");
   }
+}
 </script>
+
 </body>
 </html>
