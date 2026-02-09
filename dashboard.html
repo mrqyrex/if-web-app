@@ -5,10 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body{font-family:Arial;background:#f4f6f8;padding:20px}
-    .card{background:#fff;padding:20px;border-radius:8px;max-width:400px;margin:auto}
+    .card{background:#fff;padding:20px;border-radius:8px;max-width:420px;margin:auto}
     h2{text-align:center}
     p{margin:8px 0}
-    button{width:100%;padding:10px;margin-top:10px;background:#0a7cff;color:#fff;border:none;border-radius:5px}
+    select,input,button{
+      width:100%;padding:10px;margin-top:8px
+    }
+    button{
+      background:#0a7cff;color:#fff;border:none;border-radius:5px
+    }
   </style>
 </head>
 <body>
@@ -22,21 +27,32 @@
 
   <hr>
 
-  <p><b>Last Deposit Date:</b> <span id="last"></span></p>
   <p><b>Missed Days:</b> <span id="missed"></span></p>
   <p><b>Current Fine:</b> ৳ <span id="fine"></span></p>
 
-  <button onclick="payDeposit()">Pay Deposit (Demo)</button>
+  <hr>
+
+  <h3>Take Loan</h3>
+  <input id="loanAmount" type="number" placeholder="Loan Amount">
+  <select id="loanType">
+    <option value="one">One-time Loan (3.55%)</option>
+    <option value="installment">Installment Loan (4.55%)</option>
+  </select>
+  <button onclick="takeLoan()">Calculate Loan</button>
+
+  <p id="loanResult"></p>
+
+  <hr>
+
+  <button onclick="payDeposit()">Pay Weekly Deposit (50)</button>
 </div>
 
 <script>
   let member = JSON.parse(localStorage.getItem("member"));
-  if(!member){
-    location.href="index.html";
-  }
+  if(!member){ location.href="index.html"; }
 
-  // Demo values
   member.lastDeposit = member.lastDeposit || "2026-02-01";
+  member.loanTaken = member.loanTaken || 0;
 
   function daysBetween(d1,d2){
     return Math.floor((new Date(d2)-new Date(d1))/(1000*60*60*24));
@@ -44,23 +60,47 @@
 
   const today = new Date().toISOString().split("T")[0];
   const daysPassed = daysBetween(member.lastDeposit, today);
-
   const missedDays = Math.max(0, daysPassed - 7);
   const fine = missedDays * 5;
 
+  const loanLimit = member.deposit * 1.75;
+  const availableLimit = loanLimit - member.loanTaken;
+
   document.getElementById("mid").innerText = member.id;
   document.getElementById("deposit").innerText = member.deposit;
-  document.getElementById("limit").innerText = (member.deposit * 1.75).toFixed(2);
-  document.getElementById("last").innerText = member.lastDeposit;
+  document.getElementById("limit").innerText = availableLimit.toFixed(2);
   document.getElementById("missed").innerText = missedDays;
   document.getElementById("fine").innerText = fine;
 
   function payDeposit(){
-    member.deposit += 50; // minimum demo
+    member.deposit += 50;
     member.lastDeposit = today;
     localStorage.setItem("member", JSON.stringify(member));
-    alert("Deposit paid with fine (demo). Page will refresh.");
     location.reload();
+  }
+
+  function takeLoan(){
+    const amount = Number(document.getElementById("loanAmount").value);
+    const type = document.getElementById("loanType").value;
+
+    if(amount <= 0){
+      alert("Enter valid amount"); return;
+    }
+    if(amount > availableLimit){
+      alert("Loan limit exceeded"); return;
+    }
+
+    const feePercent = (type === "one") ? 3.55 : 4.55;
+    const feeAmount = (amount * feePercent) / 100;
+    const totalPayable = amount + feeAmount;
+
+    member.loanTaken += amount;
+    localStorage.setItem("member", JSON.stringify(member));
+
+    document.getElementById("loanResult").innerHTML =
+      "Loan Amount: ৳ " + amount +
+      "<br>Fund Fee ("+feePercent+"%): ৳ " + feeAmount.toFixed(2) +
+      "<br><b>Total Payable:</b> ৳ " + totalPayable.toFixed(2);
   }
 </script>
 
