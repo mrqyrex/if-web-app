@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel – Insaniyat Fund</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:Arial;background:#f4f6f8;padding:20px}
+    .card{background:#fff;padding:20px;border-radius:8px;max-width:500px;margin:auto}
+    h2{text-align:center}
+    input,button{width:100%;padding:10px;margin-top:10px}
+    button{background:#111;color:#fff;border:none;border-radius:5px}
+    hr{margin:15px 0}
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Admin Panel</h2>
+
+  <input id="memberId" placeholder="Member ID (IF-02)">
+  <input id="deposit" type="number" placeholder="Deposit Amount">
+  <input id="loan" type="number" placeholder="Loan Amount">
+
+  <button onclick="updateMember()">Update Member</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAi9QjLDapmlZtEkQ7Wn4q3_nvkrGho6Fs",
+  authDomain: "insaniyatfund-if.firebaseapp.com",
+  projectId: "insaniyatfund-if",
+  storageBucket: "insaniyatfund-if.firebasestorage.app",
+  messagingSenderId: "591151501337",
+  appId: "1:591151501337:web:31a8af478c43b5a4415a88"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){
+    location.href="index.html";
+    return;
+  }
+
+  if(user.email !== "admin@if.com"){
+    alert("Access denied");
+    location.href="dashboard.html";
+  }
+});
+
+window.updateMember = async function(){
+  const mid = document.getElementById("memberId").value.trim();
+  const dep = Number(document.getElementById("deposit").value);
+  const loan = Number(document.getElementById("loan").value);
+
+  if(!mid){
+    alert("Member ID required");
+    return;
+  }
+
+  const q = query(
+    collection(db, "members"),
+    where("memberId", "==", mid)
+  );
+
+  const snap = await getDocs(q);
+  if(snap.empty){
+    alert("Member not found");
+    return;
+  }
+
+  snap.forEach(async (docu)=>{
+    await updateDoc(doc(db, "members", docu.id), {
+      deposit: dep || 0,
+      loanTaken: loan || 0
+    });
+  });
+
+  alert("Member updated successfully");
+};
+</script>
+
+</body>
+</html>
