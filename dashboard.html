@@ -8,22 +8,61 @@
     .card{background:#fff;padding:20px;border-radius:8px;max-width:400px;margin:auto}
     h2{text-align:center}
     p{margin:8px 0}
+    button{width:100%;padding:10px;margin-top:10px;background:#0a7cff;color:#fff;border:none;border-radius:5px}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Member Dashboard</h2>
-    <p><b>Member ID:</b> <span id="mid"></span></p>
-    <p><b>Total Deposit:</b> ৳ <span id="deposit"></span></p>
-    <p><b>Loan Limit:</b> ৳ <span id="limit"></span></p>
-  </div>
+
+<div class="card">
+  <h2>Member Dashboard</h2>
+
+  <p><b>Member ID:</b> <span id="mid"></span></p>
+  <p><b>Total Deposit:</b> ৳ <span id="deposit"></span></p>
+  <p><b>Loan Limit:</b> ৳ <span id="limit"></span></p>
+
+  <hr>
+
+  <p><b>Last Deposit Date:</b> <span id="last"></span></p>
+  <p><b>Missed Days:</b> <span id="missed"></span></p>
+  <p><b>Current Fine:</b> ৳ <span id="fine"></span></p>
+
+  <button onclick="payDeposit()">Pay Deposit (Demo)</button>
+</div>
 
 <script>
-  const data = JSON.parse(localStorage.getItem("member"));
-  if(!data){ location.href="index.html"; }
-  document.getElementById("mid").innerText = data.id;
-  document.getElementById("deposit").innerText = data.deposit;
-  document.getElementById("limit").innerText = (data.deposit * 1.75).toFixed(2);
+  let member = JSON.parse(localStorage.getItem("member"));
+  if(!member){
+    location.href="index.html";
+  }
+
+  // Demo values
+  member.lastDeposit = member.lastDeposit || "2026-02-01";
+
+  function daysBetween(d1,d2){
+    return Math.floor((new Date(d2)-new Date(d1))/(1000*60*60*24));
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const daysPassed = daysBetween(member.lastDeposit, today);
+
+  const missedDays = Math.max(0, daysPassed - 7);
+  const fine = missedDays * 5;
+
+  document.getElementById("mid").innerText = member.id;
+  document.getElementById("deposit").innerText = member.deposit;
+  document.getElementById("limit").innerText = (member.deposit * 1.75).toFixed(2);
+  document.getElementById("last").innerText = member.lastDeposit;
+  document.getElementById("missed").innerText = missedDays;
+  document.getElementById("fine").innerText = fine;
+
+  function payDeposit(){
+    member.deposit += 50; // minimum demo
+    member.lastDeposit = today;
+    localStorage.setItem("member", JSON.stringify(member));
+    alert("Deposit paid with fine (demo). Page will refresh.");
+    location.reload();
+  }
 </script>
+
 </body>
 </html>
