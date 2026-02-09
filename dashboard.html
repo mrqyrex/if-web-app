@@ -7,8 +7,8 @@
     body{font-family:Arial;background:#f4f6f8;padding:20px}
     .card{background:#fff;padding:20px;border-radius:8px;max-width:420px;margin:auto}
     h2{text-align:center}
-    p{margin:8px 0}
-    select,input,button{
+    p{margin:6px 0}
+    input,select,button{
       width:100%;padding:10px;margin-top:8px
     }
     button{
@@ -23,10 +23,11 @@
 
   <p><b>Member ID:</b> <span id="mid"></span></p>
   <p><b>Total Deposit:</b> ৳ <span id="deposit"></span></p>
-  <p><b>Loan Limit:</b> ৳ <span id="limit"></span></p>
+  <p><b>Available Loan Limit:</b> ৳ <span id="limit"></span></p>
 
   <hr>
 
+  <p><b>Last Deposit Date:</b> <span id="last"></span></p>
   <p><b>Missed Days:</b> <span id="missed"></span></p>
   <p><b>Current Fine:</b> ৳ <span id="fine"></span></p>
 
@@ -38,8 +39,14 @@
     <option value="one">One-time Loan (3.55%)</option>
     <option value="installment">Installment Loan (4.55%)</option>
   </select>
-  <button onclick="takeLoan()">Calculate Loan</button>
 
+  <select id="installments">
+    <option value="2">2 Installments</option>
+    <option value="3">3 Installments</option>
+    <option value="4">4 Installments</option>
+  </select>
+
+  <button onclick="takeLoan()">Calculate Loan</button>
   <p id="loanResult"></p>
 
   <hr>
@@ -48,60 +55,57 @@
 </div>
 
 <script>
-  let member = JSON.parse(localStorage.getItem("member"));
-  if(!member){ location.href="index.html"; }
+let member = JSON.parse(localStorage.getItem("member"));
+if(!member){ location.href="index.html"; }
 
-  member.lastDeposit = member.lastDeposit || "2026-02-01";
-  member.loanTaken = member.loanTaken || 0;
+function daysBetween(d1,d2){
+  return Math.floor((new Date(d2)-new Date(d1))/(1000*60*60*24));
+}
 
-  function daysBetween(d1,d2){
-    return Math.floor((new Date(d2)-new Date(d1))/(1000*60*60*24));
-  }
+const today = new Date().toISOString().split("T")[0];
+const daysPassed = daysBetween(member.lastDeposit, today);
+const missedDays = Math.max(0, daysPassed - 7);
+const fine = missedDays * 5;
 
-  const today = new Date().toISOString().split("T")[0];
-  const daysPassed = daysBetween(member.lastDeposit, today);
-  const missedDays = Math.max(0, daysPassed - 7);
-  const fine = missedDays * 5;
+const loanLimit = member.deposit * 1.75;
+const availableLimit = loanLimit - member.loanTaken;
 
-  const loanLimit = member.deposit * 1.75;
-  const availableLimit = loanLimit - member.loanTaken;
+document.getElementById("mid").innerText = member.id;
+document.getElementById("deposit").innerText = member.deposit;
+document.getElementById("limit").innerText = availableLimit.toFixed(2);
+document.getElementById("last").innerText = member.lastDeposit;
+document.getElementById("missed").innerText = missedDays;
+document.getElementById("fine").innerText = fine;
 
-  document.getElementById("mid").innerText = member.id;
-  document.getElementById("deposit").innerText = member.deposit;
-  document.getElementById("limit").innerText = availableLimit.toFixed(2);
-  document.getElementById("missed").innerText = missedDays;
-  document.getElementById("fine").innerText = fine;
+function payDeposit(){
+  member.deposit += 50;
+  member.lastDeposit = today;
+  localStorage.setItem("member", JSON.stringify(member));
+  alert("Deposit + Fine received (Demo)");
+  location.reload();
+}
 
-  function payDeposit(){
-    member.deposit += 50;
-    member.lastDeposit = today;
-    localStorage.setItem("member", JSON.stringify(member));
-    location.reload();
-  }
+function takeLoan(){
+  const amount = Number(document.getElementById("loanAmount").value);
+  const type = document.getElementById("loanType").value;
+  const inst = document.getElementById("installments").value;
 
-  function takeLoan(){
-    const amount = Number(document.getElementById("loanAmount").value);
-    const type = document.getElementById("loanType").value;
+  if(amount <= 0){ alert("Enter valid amount"); return; }
+  if(amount > availableLimit){ alert("Loan limit exceeded"); return; }
 
-    if(amount <= 0){
-      alert("Enter valid amount"); return;
-    }
-    if(amount > availableLimit){
-      alert("Loan limit exceeded"); return;
-    }
+  const feePercent = (type==="one") ? 3.55 : 4.55;
+  const fee = (amount * feePercent) / 100;
+  const total = amount + fee;
 
-    const feePercent = (type === "one") ? 3.55 : 4.55;
-    const feeAmount = (amount * feePercent) / 100;
-    const totalPayable = amount + feeAmount;
+  member.loanTaken += amount;
+  localStorage.setItem("member", JSON.stringify(member));
 
-    member.loanTaken += amount;
-    localStorage.setItem("member", JSON.stringify(member));
-
-    document.getElementById("loanResult").innerHTML =
-      "Loan Amount: ৳ " + amount +
-      "<br>Fund Fee ("+feePercent+"%): ৳ " + feeAmount.toFixed(2) +
-      "<br><b>Total Payable:</b> ৳ " + totalPayable.toFixed(2);
-  }
+  document.getElementById("loanResult").innerHTML =
+    "Loan: ৳ "+amount+
+    "<br>Fund Fee ("+feePercent+"%): ৳ "+fee.toFixed(2)+
+    "<br>Installments: "+inst+
+    "<br><b>Total Payable:</b> ৳ "+total.toFixed(2);
+}
 </script>
 
 </body>
