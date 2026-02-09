@@ -1,112 +1,113 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Member Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body{font-family:Arial;background:#f4f6f8;padding:20px}
-    .card{background:#fff;padding:20px;border-radius:8px;max-width:420px;margin:auto}
-    h2{text-align:center}
-    p{margin:6px 0}
-    input,select,button{
-      width:100%;padding:10px;margin-top:8px
-    }
-    button{
-      background:#0a7cff;color:#fff;border:none;border-radius:5px
-    }
-  </style>
-</head>
-<body>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-<div class="card">
-  <h2>Member Dashboard</h2>
+/* 🔥 REAL Firebase Config */
+const firebaseConfig = {
+  apiKey: "AIzaSyAi9QjLDapmlZtEkQ7Wn4q3_nvkrGho6Fs",
+  authDomain: "insaniyatfund-if.firebaseapp.com",
+  projectId: "insaniyatfund-if",
+  storageBucket: "insaniyatfund-if.firebasestorage.app",
+  messagingSenderId: "591151501337",
+  appId: "1:591151501337:web:31a8af478c43b5a4415a88"
+};
 
-  <p><b>Member ID:</b> <span id="mid"></span></p>
-  <p><b>Total Deposit:</b> ৳ <span id="deposit"></span></p>
-  <p><b>Available Loan Limit:</b> ৳ <span id="limit"></span></p>
-
-  <hr>
-
-  <p><b>Last Deposit Date:</b> <span id="last"></span></p>
-  <p><b>Missed Days:</b> <span id="missed"></span></p>
-  <p><b>Current Fine:</b> ৳ <span id="fine"></span></p>
-
-  <hr>
-
-  <h3>Take Loan</h3>
-  <input id="loanAmount" type="number" placeholder="Loan Amount">
-  <select id="loanType">
-    <option value="one">One-time Loan (3.55%)</option>
-    <option value="installment">Installment Loan (4.55%)</option>
-  </select>
-
-  <select id="installments">
-    <option value="2">2 Installments</option>
-    <option value="3">3 Installments</option>
-    <option value="4">4 Installments</option>
-  </select>
-
-  <button onclick="takeLoan()">Calculate Loan</button>
-  <p id="loanResult"></p>
-
-  <hr>
-
-  <button onclick="payDeposit()">Pay Weekly Deposit (50)</button>
-</div>
-
-<script>
-let member = JSON.parse(localStorage.getItem("member"));
-if(!member){ location.href="index.html"; }
-
-function daysBetween(d1,d2){
-  return Math.floor((new Date(d2)-new Date(d1))/(1000*60*60*24));
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 const today = new Date().toISOString().split("T")[0];
-const daysPassed = daysBetween(member.lastDeposit, today);
-const missedDays = Math.max(0, daysPassed - 7);
-const fine = missedDays * 5;
 
-const loanLimit = member.deposit * 1.75;
-const availableLimit = loanLimit - member.loanTaken;
-
-document.getElementById("mid").innerText = member.id;
-document.getElementById("deposit").innerText = member.deposit;
-document.getElementById("limit").innerText = availableLimit.toFixed(2);
-document.getElementById("last").innerText = member.lastDeposit;
-document.getElementById("missed").innerText = missedDays;
-document.getElementById("fine").innerText = fine;
-
-function payDeposit(){
-  member.deposit += 50;
-  member.lastDeposit = today;
-  localStorage.setItem("member", JSON.stringify(member));
-  alert("Deposit + Fine received (Demo)");
-  location.reload();
+function daysBetween(d1, d2){
+  return Math.floor((new Date(d2) - new Date(d1)) / (1000 * 60 * 60 * 24));
 }
 
-function takeLoan(){
-  const amount = Number(document.getElementById("loanAmount").value);
-  const type = document.getElementById("loanType").value;
-  const inst = document.getElementById("installments").value;
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
 
-  if(amount <= 0){ alert("Enter valid amount"); return; }
-  if(amount > availableLimit){ alert("Loan limit exceeded"); return; }
+  const ref = doc(db, "members", user.uid);
+  const snap = await getDoc(ref);
 
-  const feePercent = (type==="one") ? 3.55 : 4.55;
-  const fee = (amount * feePercent) / 100;
-  const total = amount + fee;
+  if (!snap.exists()) {
+    alert("Member data not found");
+    return;
+  }
 
-  member.loanTaken += amount;
-  localStorage.setItem("member", JSON.stringify(member));
+  let m = snap.data();
 
-  document.getElementById("loanResult").innerHTML =
-    "Loan: ৳ "+amount+
-    "<br>Fund Fee ("+feePercent+"%): ৳ "+fee.toFixed(2)+
-    "<br>Installments: "+inst+
-    "<br><b>Total Payable:</b> ৳ "+total.toFixed(2);
-}
-</script>
+  /* ===== Fine Calculation ===== */
+  let missedDays = 0;
+  let fine = 0;
 
-</body>
-</html>
+  if (m.lastDeposit) {
+    const daysPassed = daysBetween(m.lastDeposit, today);
+    missedDays = Math.max(0, daysPassed - 7);
+    fine = missedDays * 5;
+  }
+
+  const loanLimit = m.deposit * 1.75;
+  const availableLimit = loanLimit - m.loanTaken;
+
+  /* ===== UI Bind ===== */
+  document.getElementById("mid").innerText = m.memberId;
+  document.getElementById("deposit").innerText = m.deposit;
+  document.getElementById("limit").innerText = availableLimit.toFixed(2);
+  document.getElementById("last").innerText = m.lastDeposit || "Not yet";
+  document.getElementById("missed").innerText = missedDays;
+  document.getElementById("fine").innerText = fine;
+
+  /* ===== Deposit ===== */
+  window.payDeposit = async function () {
+    const amount = prompt("Enter deposit amount (minimum 50):");
+    const val = Number(amount);
+
+    if (isNaN(val) || val < 50) {
+      alert("Minimum deposit is 50");
+      return;
+    }
+
+    await updateDoc(ref, {
+      deposit: m.deposit + val,
+      lastDeposit: today
+    });
+
+    alert("Deposit saved successfully");
+    location.reload();
+  };
+
+  /* ===== Loan ===== */
+  window.takeLoan = async function () {
+    const amount = Number(document.getElementById("loanAmount").value);
+    const type = document.getElementById("loanType").value;
+    const inst = document.getElementById("installments").value;
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Invalid loan amount");
+      return;
+    }
+
+    if (amount > availableLimit) {
+      alert("Loan limit exceeded");
+      return;
+    }
+
+    const feePercent = (type === "one") ? 3.55 : 4.55;
+    const fee = (amount * feePercent) / 100;
+    const total = amount + fee;
+
+    await updateDoc(ref, {
+      loanTaken: m.loanTaken + amount
+    });
+
+    document.getElementById("loanResult").innerHTML =
+      "Loan Amount: ৳ " + amount +
+      "<br>Fund Fee (" + feePercent + "%): ৳ " + fee.toFixed(2) +
+      "<br>Installments: " + inst +
+      "<br><b>Total Payable:</b> ৳ " + total.toFixed(2);
+  };
+});
+  </script>
